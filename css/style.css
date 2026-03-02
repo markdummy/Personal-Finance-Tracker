@@ -1376,29 +1376,84 @@ body {
   padding: 20px;
 }
 
-/* RESPONSIVE STYLES */
+/* HAMBURGER MENU */
 
-@media (min-width: 1024px) {
-}
-
-@media (max-width: 1920px) {
-}
-
-@media (max-width: 1680px) {
-}
-
-@media (max-width: 1440px) {
-}
-
-@media (max-width: 1366px) {
-
-}
-
-@media (max-width: 1280px) {
-  .navbar {
+.hamburger {
   display: none;
+  flex-direction: column;
+  justify-content: space-between;
+  width: 28px;
+  height: 20px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  margin-left: auto;
 }
+
+.hamburger__bar {
+  display: block;
+  width: 100%;
+  height: 3px;
+  background-color: var(--button);
+  border-radius: 2px;
+  transition: transform 0.3s ease, opacity 0.3s ease;
 }
+
+.hamburger--open .hamburger__bar:nth-child(1) {
+  transform: translateY(8.5px) rotate(45deg);
+}
+
+.hamburger--open .hamburger__bar:nth-child(2) {
+  opacity: 0;
+}
+
+.hamburger--open .hamburger__bar:nth-child(3) {
+  transform: translateY(-8.5px) rotate(-45deg);
+}
+
+/* MOBILE MENU */
+
+.mobile-menu {
+  display: none;
+  background-color: var(--headline);
+  overflow: hidden;
+  max-height: 0;
+  transition: max-height 0.3s ease;
+}
+
+.mobile-menu--open {
+  max-height: 500px;
+}
+
+.mobile-nav-list {
+  list-style: none;
+  padding: 10px 0;
+  margin: 0;
+}
+
+.mobile-nav-list .nav-item a {
+  display: block;
+  padding: 14px 24px;
+  text-decoration: none;
+  color: var(--button);
+  font-size: 16px;
+  font-weight: 500;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.mobile-nav-list .nav-item:last-child a {
+  border-bottom: none;
+}
+
+.mobile-nav-list .nav-item a:hover,
+.mobile-nav-list .nav-item.active a,
+.mobile-nav-list .nav-item a.active {
+  color: var(--highlight);
+  background-color: rgba(255, 255, 255, 0.06);
+}
+
+/* RESPONSIVE STYLES */
 
 @media (max-width: 1200px) {
   .income-content-grid {
@@ -1410,35 +1465,239 @@ body {
   }
 }
 
-@media (max-width: 1160px) {
-}
-
 @media (max-width: 1024px) {
-}
+  .navbar {
+    padding: 0 20px;
+  }
 
-@media (max-width: 840px) {
+  .nav-list {
+    gap: 30px;
+    font-size: 16px;
+  }
+
+  .dashboard,
+  .budget-section,
+  .report-container,
+  .income-page {
+    padding: 30px;
+  }
 }
 
 @media (max-width: 768px) {
+  /* Show hamburger, hide desktop nav */
+  .hamburger {
+    display: flex;
+  }
+
+  .nav-list {
+    display: none;
+  }
+
+  .logo-text {
+    font-size: 18px;
+  }
+
+  .mobile-menu {
+    display: block;
+  }
+
+  /* Reduce section padding */
+  .dashboard,
+  .budget-section,
+  .report-container,
+  .income-page {
+    padding: 16px;
+  }
+
+  /* Scale down card values */
+  .card__value {
+    font-size: 24px;
+  }
+
+  /* Make card grids 2-per-row on tablet/mobile */
+  .card-grid--4 > .card,
+  .card-grid--3 > .card {
+    flex: 1 1 calc(50% - 10px);
+    min-width: 0;
+  }
+
+  /* Chart cards full width */
+  .chart-card {
+    flex: 1 1 100%;
+    min-width: 0;
+  }
+
+  /* Stack expenses side-by-side layout */
+  .expenses-container {
+    flex-direction: column;
+    padding: 16px;
+  }
+
+  /* Full-width add expense button */
+  .add-expense-btn {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  /* Stack two-inputs form fields */
+  .two-inputs {
+    flex-direction: column;
+    gap: 0;
+  }
+
+  /* Stack income form row */
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+
+  /* Wrap and resize filter bar */
+  .filter-bar {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .filter-pill {
+    width: auto;
+    flex: 1 1 calc(50% - 10px);
+    min-width: 120px;
+  }
+
+  .generate-btn,
+  .export-btn {
+    width: auto;
+    flex: 1 1 calc(50% - 10px);
+    margin-left: 0;
+  }
+
+  /* Stack reports comparison grid */
+  .rep-comparison-container {
+    grid-template-columns: 1fr;
+  }
+
+  /* Stack donut chart layout */
+  .donut-container {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .donut-wrapper {
+    margin: 0;
+    width: 200px;
+    height: 200px;
+  }
+
+  /* Budget padding */
+  .budg-percentage {
+    padding: 16px;
+  }
+
+  .budget-summary-card-container {
+    padding: 20px;
+  }
+
+  .finance-summary-card-container {
+    padding: 20px;
+  }
+
+  /* Income filters stack */
+  .income-filters {
+    flex-wrap: wrap;
+  }
+
+  .filter-select {
+    flex: 1 1 calc(50% - 5px);
+  }
+
+  /* Notification positioning */
+  .notification {
+    right: 10px;
+    left: 10px;
+    max-width: none;
+    transform: translateY(-100px);
+  }
+
+  .notification.show {
+    transform: translateY(0);
+  }
 }
 
-@media (max-width: 680px) {
-}
+@media (max-width: 480px) {
+  .navbar {
+    height: 70px;
+    padding: 0 16px;
+  }
 
-@media (max-width: 590px) {
-}
+  .logo {
+    width: 70px;
+  }
 
-@media (max-width: 475px) {
-}
+  .logo-text {
+    font-size: 15px;
+  }
 
-@media (max-width: 420px) {
-}
+  /* Further scale down card values */
+  .card__value {
+    font-size: 20px;
+  }
 
-@media (max-width: 390px) {
-}
+  /* Single-column cards on very small screens */
+  .card-grid--4 > .card,
+  .card-grid--3 > .card {
+    flex: 1 1 100%;
+  }
 
-@media (max-width: 375px) {
-}
+  .filter-pill {
+    flex: 1 1 100%;
+  }
 
-@media (max-width: 320px) {
+  .generate-btn,
+  .export-btn {
+    flex: 1 1 100%;
+  }
+
+  /* Budget category items */
+  .budg-percentage-item {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .budg-text-content {
+    min-width: 100px;
+  }
+
+  /* Chart cards */
+  .chart-card {
+    min-width: 0;
+  }
+
+  /* Modal full-width on small screens */
+  .modal-content {
+    width: 95%;
+    border-radius: 12px;
+  }
+
+  .modal-header {
+    padding: 16px 20px;
+  }
+
+  /* Breakdown items wrap on very small screens */
+  .breakdown-item {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .breakdown-amount {
+    width: 100%;
+    text-align: left;
+  }
+
+  /* Income items wrap */
+  .income-item {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .income-amount {
+    font-size: 16px;
+  }
 }
