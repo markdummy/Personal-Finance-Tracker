@@ -172,14 +172,6 @@ const FinanceDataStore = {
     return monthlyData;
   },
 
-  // STORAGE KEY SCOPED PER LOGGED-IN USER
-  _storageKey() {
-    const user = window.Auth && window.Auth.getCurrentUser();
-    return user
-      ? "financeTrackerData_" + encodeURIComponent(user.username)
-      : "financeTrackerData";
-  },
-
   save() {
     try {
       const data = {
@@ -190,7 +182,7 @@ const FinanceDataStore = {
         transactions: this.transactions,
         lastUpdated: new Date().toISOString(),
       };
-      localStorage.setItem(this._storageKey(), JSON.stringify(data));
+      localStorage.setItem("financeTrackerData", JSON.stringify(data));
       return true;
     } catch (error) {
       console.error("❌ SAVE FAILED", error);
@@ -201,7 +193,7 @@ const FinanceDataStore = {
   // LOAD FROM LOCALSTORAGE
   load() {
     try {
-      const saved = localStorage.getItem(this._storageKey());
+      const saved = localStorage.getItem("financeTrackerData");
       if (!saved) {
         console.log("ℹ️ NO SAVED DATA - STARTING FRESH");
         return false;
@@ -240,7 +232,7 @@ const FinanceDataStore = {
     });
 
     this.transactions = [];
-    localStorage.removeItem(this._storageKey());
+    localStorage.removeItem("financeTrackerData");
 
     console.log("🗑️ ALL DATA CLEARED");
     return true;
