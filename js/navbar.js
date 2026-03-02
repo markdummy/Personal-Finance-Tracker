@@ -11,6 +11,10 @@ const Navbar = {
           <li class="nav-item"><a href="PATH_PREFIX/pages/expenses.html" data-page="expenses">Expenses</a></li>
           <li class="nav-item"><a href="PATH_PREFIX/pages/reports.html" data-page="reports">Reports</a></li>
         </ul>
+        <div class="nav-user">
+          <span class="nav-username"></span>
+          <button class="btn-logout" type="button">Logout</button>
+        </div>
         <button class="hamburger" aria-label="Toggle navigation" aria-expanded="false">
           <span class="hamburger__bar"></span>
           <span class="hamburger__bar"></span>
@@ -25,6 +29,10 @@ const Navbar = {
           <li class="nav-item"><a href="PATH_PREFIX/pages/expenses.html" data-page="expenses">Expenses</a></li>
           <li class="nav-item"><a href="PATH_PREFIX/pages/reports.html" data-page="reports">Reports</a></li>
         </ul>
+        <div class="mobile-nav-user">
+          <span class="mobile-nav-username"></span>
+          <button class="mobile-btn-logout" type="button">Logout</button>
+        </div>
       </div>
     </header>
   `,
@@ -38,6 +46,19 @@ const Navbar = {
 
     if (currentPage) {
       this.setActivePage(currentPage);
+    }
+
+    // Populate username and wire logout buttons
+    const user = window.Auth && window.Auth.getCurrentUser();
+    if (user) {
+      const usernameEls = document.querySelectorAll(
+        ".nav-username, .mobile-nav-username"
+      );
+      usernameEls.forEach((el) => (el.textContent = "👤 " + user.username));
+
+      document.querySelectorAll(".btn-logout, .mobile-btn-logout").forEach((btn) => {
+        btn.addEventListener("click", () => window.Auth.logout());
+      });
     }
 
     this.initHamburger();
