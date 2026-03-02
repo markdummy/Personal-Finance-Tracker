@@ -44,6 +44,11 @@
             autocomplete="current-password"
           />
 
+          <div class="auth-remember">
+            <input type="checkbox" id="remember-me" />
+            <label for="remember-me">Remember me on this device</label>
+          </div>
+
           <button type="submit" class="auth-btn">Sign In</button>
         </form>
 
@@ -62,7 +67,8 @@
           e.preventDefault();
           var username = document.getElementById("username").value;
           var password = document.getElementById("password").value;
-          var result = Auth.login(username, password);
+          var rememberMe = document.getElementById("remember-me").checked;
+          var result = Auth.login(username, password, rememberMe);
           var errorEl = document.getElementById("auth-error");
           if (result.success) {
             window.location.replace("../index.html");

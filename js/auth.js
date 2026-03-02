@@ -65,7 +65,9 @@ const Auth = {
   },
 
   // LOGIN AN EXISTING USER
-  login(username, password) {
+  // rememberMe=true stores the session in localStorage so it survives
+  // browser restarts (important for mobile devices).
+  login(username, password, rememberMe) {
     username = (username || "").trim().toLowerCase();
     password = password || "";
 
@@ -86,20 +88,35 @@ const Auth = {
       userId: user.id,
       username: user.username,
       loginTime: new Date().toISOString(),
+      rememberMe: !!rememberMe,
     };
-    sessionStorage.setItem(this.SESSION_KEY, JSON.stringify(session));
-    console.log("✅ USER LOGGED IN:", username);
+    const storage = rememberMe ? localStorage : sessionStorage;
+    storage.setItem(this.SESSION_KEY, JSON.stringify(session));
+    console.log("✅ USER LOGGED IN:", username, rememberMe ? "(remembered)" : "");
     return { success: true, user };
   },
 
   // LOGOUT CURRENT USER
   logout() {
+    localStorage.removeItem(this.SESSION_KEY);
     sessionStorage.removeItem(this.SESSION_KEY);
     console.log("👋 USER LOGGED OUT");
   },
 
   // GET CURRENT SESSION
+  // Checks localStorage first (remembered sessions), then sessionStorage.
   getSession() {
+    try {
+      const localRaw = localStorage.getItem(this.SESSION_KEY);
+      if (localRaw) {
+        const localSession = JSON.parse(localRaw);
+        if (localSession && localSession.rememberMe) return localSession;
+        // Stored without rememberMe — treat as stale and remove it.
+        localStorage.removeItem(this.SESSION_KEY);
+      }
+    } catch {
+      localStorage.removeItem(this.SESSION_KEY);
+    }
     try {
       return JSON.parse(sessionStorage.getItem(this.SESSION_KEY));
     } catch {
