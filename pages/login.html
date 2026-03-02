@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Login | Personal Finance Tracker</title>
+    <link rel="icon" type="image/x-icon" href="../assets/logo.png" />
+    <link rel="stylesheet" href="../css/style.css" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Roboto&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <script src="../js/auth.js"></script>
+    <script>
+      if (Auth.isLoggedIn()) window.location.replace("../index.html");
+    </script>
+
+    <div class="auth-page">
+      <div class="auth-card">
+        <img src="../assets/logo.png" class="auth-logo" alt="logo" />
+        <h1 class="auth-title">FINANCE TRACKER</h1>
+        <h2 class="auth-subtitle">Sign in to your account</h2>
+
+        <div id="auth-error" class="auth-error" style="display: none"></div>
+
+        <form id="login-form" class="auth-form">
+          <label for="username">Username</label>
+          <input
+            type="text"
+            id="username"
+            placeholder="Enter your username"
+            required
+            autocomplete="username"
+          />
+
+          <label for="password">Password</label>
+          <input
+            type="password"
+            id="password"
+            placeholder="Enter your password"
+            required
+            autocomplete="current-password"
+          />
+
+          <button type="submit" class="auth-btn">Sign In</button>
+        </form>
+
+        <p class="auth-switch">
+          Don't have an account?
+          <a href="register.html">Register here</a>
+        </p>
+        <p class="auth-notice">⚠️ Demo app: accounts are stored locally. Do not use real passwords.</p>
+      </div>
+    </div>
+
+    <script>
+      document
+        .getElementById("login-form")
+        .addEventListener("submit", function (e) {
+          e.preventDefault();
+          var username = document.getElementById("username").value;
+          var password = document.getElementById("password").value;
+          var result = Auth.login(username, password);
+          var errorEl = document.getElementById("auth-error");
+          if (result.success) {
+            window.location.replace("../index.html");
+          } else {
+            errorEl.textContent = result.message;
+            errorEl.style.display = "block";
+          }
+        });
+    </script>
+  </body>
+</html>
