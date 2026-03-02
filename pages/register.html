@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Register | Personal Finance Tracker</title>
+    <link rel="icon" type="image/x-icon" href="../assets/logo.png" />
+    <link rel="stylesheet" href="../css/style.css" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Roboto&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <script src="../js/auth.js"></script>
+    <script>
+      if (Auth.isLoggedIn()) window.location.replace("../index.html");
+    </script>
+
+    <div class="auth-page">
+      <div class="auth-card">
+        <img src="../assets/logo.png" class="auth-logo" alt="logo" />
+        <h1 class="auth-title">FINANCE TRACKER</h1>
+        <h2 class="auth-subtitle">Create a new account</h2>
+
+        <div id="auth-error" class="auth-error" style="display: none"></div>
+        <div id="auth-success" class="auth-success" style="display: none"></div>
+
+        <form id="register-form" class="auth-form">
+          <label for="username">Username</label>
+          <input
+            type="text"
+            id="username"
+            placeholder="Choose a username (min 3 chars)"
+            required
+            autocomplete="username"
+          />
+
+          <label for="password">Password</label>
+          <input
+            type="password"
+            id="password"
+            placeholder="Choose a password (min 6 chars)"
+            required
+            autocomplete="new-password"
+          />
+
+          <label for="confirm-password">Confirm Password</label>
+          <input
+            type="password"
+            id="confirm-password"
+            placeholder="Confirm your password"
+            required
+            autocomplete="new-password"
+          />
+
+          <button type="submit" class="auth-btn">Create Account</button>
+        </form>
+
+        <p class="auth-switch">
+          Already have an account?
+          <a href="login.html">Sign in here</a>
+        </p>
+        <p class="auth-notice">⚠️ Demo app: accounts are stored locally. Do not use real passwords.</p>
+      </div>
+    </div>
+
+    <script>
+      document
+        .getElementById("register-form")
+        .addEventListener("submit", function (e) {
+          e.preventDefault();
+          var username = document.getElementById("username").value;
+          var password = document.getElementById("password").value;
+          var confirm = document.getElementById("confirm-password").value;
+          var errorEl = document.getElementById("auth-error");
+          var successEl = document.getElementById("auth-success");
+
+          errorEl.style.display = "none";
+          successEl.style.display = "none";
+
+          if (password !== confirm) {
+            errorEl.textContent = "Passwords do not match.";
+            errorEl.style.display = "block";
+            return;
+          }
+
+          var result = Auth.register(username, password);
+          if (result.success) {
+            successEl.textContent =
+              "Account created! Redirecting to login…";
+            successEl.style.display = "block";
+            setTimeout(function () {
+              window.location.replace("login.html");
+            }, 1500);
+          } else {
+            errorEl.textContent = result.message;
+            errorEl.style.display = "block";
+          }
+        });
+    </script>
+  </body>
+</html>

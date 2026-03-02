@@ -11,6 +11,10 @@ const Navbar = {
           <li class="nav-item"><a href="PATH_PREFIX/pages/expenses.html" data-page="expenses">Expenses</a></li>
           <li class="nav-item"><a href="PATH_PREFIX/pages/reports.html" data-page="reports">Reports</a></li>
         </ul>
+        <div class="nav-user">
+          <span class="nav-username">👤 NAV_USERNAME</span>
+          <button class="nav-logout-btn" id="nav-logout-btn">Logout</button>
+        </div>
         <button class="hamburger" aria-label="Toggle navigation" aria-expanded="false">
           <span class="hamburger__bar"></span>
           <span class="hamburger__bar"></span>
@@ -25,14 +29,22 @@ const Navbar = {
           <li class="nav-item"><a href="PATH_PREFIX/pages/expenses.html" data-page="expenses">Expenses</a></li>
           <li class="nav-item"><a href="PATH_PREFIX/pages/reports.html" data-page="reports">Reports</a></li>
         </ul>
+        <div class="mobile-nav-user">
+          <span class="mobile-nav-username">👤 NAV_USERNAME</span>
+          <button class="mobile-nav-logout-btn" id="mobile-nav-logout-btn">Logout</button>
+        </div>
       </div>
     </header>
   `,
 
   render(currentPage = "", pathPrefix = "") {
+    const user = window.Auth ? Auth.getCurrentUser() : null;
+    const username = user ? user.username : "";
+
     let html = this.template
       .replace(/PATH_PREFIX\//g, pathPrefix)
-      .replace("LOGO_PATH/", pathPrefix);
+      .replace("LOGO_PATH/", pathPrefix)
+      .replace(/NAV_USERNAME/g, username);
 
     document.body.insertAdjacentHTML("afterbegin", html);
 
@@ -41,6 +53,24 @@ const Navbar = {
     }
 
     this.initHamburger();
+    this.initLogout(pathPrefix);
+  },
+
+  initLogout(pathPrefix = "") {
+    // pathPrefix is "" when on root (index.html) and "../" when inside pages/
+    // Both resolve to pages/login.html from their respective locations
+    const loginPath = pathPrefix + "pages/login.html";
+    const logoutHandler = () => {
+      if (window.Auth) Auth.logout();
+      window.location.replace(loginPath);
+    };
+
+    const logoutBtn = document.getElementById("nav-logout-btn");
+    if (logoutBtn) logoutBtn.addEventListener("click", logoutHandler);
+
+    const mobileLogoutBtn = document.getElementById("mobile-nav-logout-btn");
+    if (mobileLogoutBtn)
+      mobileLogoutBtn.addEventListener("click", logoutHandler);
   },
 
   setActivePage(pageName) {
