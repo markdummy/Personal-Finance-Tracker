@@ -68,7 +68,7 @@
     <script>
       document
         .getElementById("register-form")
-        .addEventListener("submit", function (e) {
+        .addEventListener("submit", async function (e) {
           e.preventDefault();
           var username = document.getElementById("username").value;
           var password = document.getElementById("password").value;
@@ -85,7 +85,7 @@
             return;
           }
 
-          var result = Auth.register(username, password);
+          var result = await Auth.register(username, password);
           if (result.success) {
             successEl.textContent =
               "Account created! Redirecting to login…";

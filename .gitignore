@@ -1,1 +1,3 @@
 secret.txt
+backend/node_modules
+backend/users.db

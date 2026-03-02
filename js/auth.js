@@ -1,13 +1,27 @@
-// AUTHENTICATION MODULE - USER DATABASE BACKED BY LOCALSTORAGE
+// AUTHENTICATION MODULE - USER DATABASE BACKED BY SERVER (SQLite via REST API)
+// Falls back to localStorage when the backend is unavailable.
 
 const Auth = {
   USERS_KEY: "financeTrackerUsers",
   SESSION_KEY: "financeTrackerSession",
+  API_BASE: "/api/auth",
 
-  // SIMPLE DETERMINISTIC HASH — for client-side demo only.
-  // ⚠️ NOT cryptographically secure. Do NOT use real passwords.
-  // For production, use a server-side solution with bcrypt or Argon2.
-  hashPassword(password) {
+  // ── BACKEND API HELPERS ───────────────────────────────────────────────────
+
+  async _apiPost(endpoint, body) {
+    const res = await fetch(this.API_BASE + endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    return res.json();
+  },
+
+  // ── LOCALSTORAGE FALLBACK (used when backend is unreachable) ──────────────
+
+  // SIMPLE DETERMINISTIC HASH — fallback only.
+  // ⚠️ NOT cryptographically secure. Use the backend for real auth.
+  _hashPassword(password) {
     let h = 5381;
     for (let i = 0; i < password.length; i++) {
       h = (((h << 5) + h) ^ password.charCodeAt(i)) | 0;
@@ -15,8 +29,8 @@ const Auth = {
     return (h >>> 0).toString(16).padStart(8, "0");
   },
 
-  // READ ALL USERS FROM DATABASE (LOCALSTORAGE)
-  getUsers() {
+  // READ ALL USERS FROM LOCALSTORAGE (fallback)
+  _getLocalUsers() {
     try {
       return JSON.parse(localStorage.getItem(this.USERS_KEY)) || [];
     } catch {
@@ -24,13 +38,61 @@ const Auth = {
     }
   },
 
-  // WRITE ALL USERS TO DATABASE (LOCALSTORAGE)
-  saveUsers(users) {
+  // WRITE ALL USERS TO LOCALSTORAGE (fallback)
+  _saveLocalUsers(users) {
     localStorage.setItem(this.USERS_KEY, JSON.stringify(users));
   },
 
-  // REGISTER A NEW USER
-  register(username, password) {
+  // REGISTER via localStorage (fallback)
+  _registerLocal(username, password) {
+    const users = this._getLocalUsers();
+    if (users.find((u) => u.username === username))
+      return { success: false, message: "Username already taken." };
+
+    const user = {
+      id: Date.now().toString(36) + Math.random().toString(36).substring(2),
+      username,
+      passwordHash: this._hashPassword(password),
+      createdAt: new Date().toISOString(),
+    };
+    users.push(user);
+    this._saveLocalUsers(users);
+    console.log("✅ USER REGISTERED (local fallback):", username);
+    return { success: true, user };
+  },
+
+  // LOGIN via localStorage (fallback)
+  _loginLocal(username, password, rememberMe) {
+    const users = this._getLocalUsers();
+    const user = users.find(
+      (u) =>
+        u.username === username &&
+        u.passwordHash === this._hashPassword(password)
+    );
+    if (!user)
+      return { success: false, message: "Invalid username or password." };
+    this._saveSession(user, rememberMe);
+    console.log("✅ USER LOGGED IN (local fallback):", username);
+    return { success: true, user };
+  },
+
+  // ── SESSION HELPERS ───────────────────────────────────────────────────────
+
+  _saveSession(user, rememberMe) {
+    const session = {
+      userId: user.id,
+      username: user.username,
+      loginTime: new Date().toISOString(),
+      rememberMe: !!rememberMe,
+    };
+    const storage = rememberMe ? localStorage : sessionStorage;
+    storage.setItem(this.SESSION_KEY, JSON.stringify(session));
+  },
+
+  // ── PUBLIC API ────────────────────────────────────────────────────────────
+
+  // REGISTER A NEW USER (calls backend, falls back to localStorage)
+  async register(username, password) {
     username = (username || "").trim().toLowerCase();
     password = password || "";
 
@@ -47,53 +109,37 @@ const Auth = {
         message: "Password must be at least 6 characters.",
       };
 
-    const users = this.getUsers();
-    if (users.find((u) => u.username === username))
-      return { success: false, message: "Username already taken." };
-
-    const user = {
-      id: Date.now().toString(36) + Math.random().toString(36).substring(2),
-      username,
-      passwordHash: this.hashPassword(password),
-      createdAt: new Date().toISOString(),
-    };
-
-    users.push(user);
-    this.saveUsers(users);
-    console.log("✅ USER REGISTERED:", username);
-    return { success: true, user };
+    try {
+      const result = await this._apiPost("/register", { username, password });
+      if (result.success) console.log("✅ USER REGISTERED:", username);
+      return result;
+    } catch (err) {
+      console.warn("⚠️ Backend unavailable — using local fallback for register:", err.message);
+      return this._registerLocal(username, password);
+    }
   },
 
-  // LOGIN AN EXISTING USER
+  // LOGIN AN EXISTING USER (calls backend, falls back to localStorage)
   // rememberMe=true stores the session in localStorage so it survives
   // browser restarts (important for mobile devices).
-  login(username, password, rememberMe) {
+  async login(username, password, rememberMe) {
     username = (username || "").trim().toLowerCase();
     password = password || "";
 
     if (!username || !password)
       return { success: false, message: "Username and password are required." };
 
-    const users = this.getUsers();
-    const user = users.find(
-      (u) =>
-        u.username === username &&
-        u.passwordHash === this.hashPassword(password)
-    );
-
-    if (!user)
-      return { success: false, message: "Invalid username or password." };
-
-    const session = {
-      userId: user.id,
-      username: user.username,
-      loginTime: new Date().toISOString(),
-      rememberMe: !!rememberMe,
-    };
-    const storage = rememberMe ? localStorage : sessionStorage;
-    storage.setItem(this.SESSION_KEY, JSON.stringify(session));
-    console.log("✅ USER LOGGED IN:", username, rememberMe ? "(remembered)" : "");
-    return { success: true, user };
+    try {
+      const result = await this._apiPost("/login", { username, password });
+      if (result.success) {
+        this._saveSession(result.user, rememberMe);
+        console.log("✅ USER LOGGED IN:", username, rememberMe ? "(remembered)" : "");
+      }
+      return result;
+    } catch (err) {
+      console.warn("⚠️ Backend unavailable — using local fallback for login:", err.message);
+      return this._loginLocal(username, password, rememberMe);
+    }
   },
 
   // LOGOUT CURRENT USER
