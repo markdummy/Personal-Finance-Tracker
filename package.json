@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Personal Finance Tracker — Vercel deployment",
   "dependencies": {
-    "@vercel/postgres": "^0.10.0",
+    "@neondatabase/serverless": "^1.0.2",
     "bcryptjs": "^3.0.3"
   }
 }

@@ -1,8 +1,33 @@
 // Shared database helpers for Vercel serverless functions.
-// Uses @vercel/postgres (Neon Postgres) when POSTGRES_URL is set.
+// Uses @neondatabase/serverless (Neon Postgres HTTP driver).
+// Reads DATABASE_URL (set by the Vercel Neon integration) or the legacy POSTGRES_URL.
 
-const { sql } = require("@vercel/postgres");
+const { neon } = require("@neondatabase/serverless");
 const crypto = require("crypto");
+
+// Lazily create the Neon SQL function so the module can be imported even when
+// the environment variable is not yet set (e.g. during local testing without a DB).
+let _neonSql = null;
+function _getSql() {
+  if (!_neonSql) {
+    const connectionString = process.env.DATABASE_URL || process.env.POSTGRES_URL;
+    if (!connectionString) {
+      throw new Error(
+        "Database not configured: set DATABASE_URL (or POSTGRES_URL) environment variable."
+      );
+    }
+    _neonSql = neon(connectionString);
+  }
+  return _neonSql;
+}
+
+// Tagged-template wrapper that returns { rows } — matching the @vercel/postgres
+// shape expected by the rest of the codebase, so other files need no changes.
+// Using async ensures errors from _getSql() are always returned as rejected Promises.
+const sql = async (strings, ...values) => {
+  const rows = await _getSql()(strings, ...values);
+  return { rows };
+};
 
 // Cache the init promise so tables are only created once per cold start.
 // Reset on failure so the next request can retry (e.g., transient DB error).
