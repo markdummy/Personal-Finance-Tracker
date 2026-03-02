@@ -14,6 +14,11 @@ document.addEventListener("DOMContentLoaded", () => {
   console.log("✅ INCOME PAGE READY");
 });
 
+// RE-RENDER WHEN SERVER DATA ARRIVES (cross-device sync)
+window.addEventListener("financedata:synced", () => {
+  updateIncomePage();
+});
+
 function setupIncomeForm() {
   const form = document.getElementById("income-form");
   if (!form) return;

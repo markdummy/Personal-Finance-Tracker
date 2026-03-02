@@ -15,6 +15,11 @@ document.addEventListener("DOMContentLoaded", () => {
   console.log("✅ EXPENSES PAGE READY");
 });
 
+// RE-RENDER WHEN SERVER DATA ARRIVES (cross-device sync)
+window.addEventListener("financedata:synced", () => {
+  displayAllExpenses();
+});
+
 function setupExpenseForm() {
   const form = document.querySelector(".add-expense-card form");
   if (!form) return;

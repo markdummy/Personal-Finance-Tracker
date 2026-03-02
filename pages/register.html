@@ -61,7 +61,7 @@
           Already have an account?
           <a href="login.html">Sign in here</a>
         </p>
-        <p class="auth-notice">⚠️ Demo app: accounts are stored locally. Do not use real passwords.</p>
+        <p class="auth-notice">Your account is stored on the server — you can log in from any device.</p>
       </div>
     </div>
 
@@ -88,10 +88,10 @@
           var result = await Auth.register(username, password);
           if (result.success) {
             successEl.textContent =
-              "Account created! Redirecting to login…";
+              "Account created! Taking you to your dashboard…";
             successEl.style.display = "block";
             setTimeout(function () {
-              window.location.replace("login.html");
+              window.location.replace("../index.html");
             }, 1500);
           } else {
             errorEl.textContent = result.message;

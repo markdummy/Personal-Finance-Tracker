@@ -270,3 +270,8 @@ document.addEventListener("DOMContentLoaded", () => {
 window.addEventListener("focus", () => {
   updateDashboard();
 });
+
+// RE-RENDER WHEN SERVER DATA ARRIVES (cross-device sync)
+window.addEventListener("financedata:synced", () => {
+  updateDashboard();
+});

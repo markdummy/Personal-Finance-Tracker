@@ -78,12 +78,13 @@ const Auth = {
 
   // ── SESSION HELPERS ───────────────────────────────────────────────────────
 
-  _saveSession(user, rememberMe) {
+  _saveSession(user, rememberMe, token) {
     const session = {
       userId: user.id,
       username: user.username,
       loginTime: new Date().toISOString(),
       rememberMe: !!rememberMe,
+      token: token || null,
     };
     const storage = rememberMe ? localStorage : sessionStorage;
     storage.setItem(this.SESSION_KEY, JSON.stringify(session));
@@ -111,7 +112,11 @@ const Auth = {
 
     try {
       const result = await this._apiPost("/register", { username, password });
-      if (result.success) console.log("✅ USER REGISTERED:", username);
+      if (result.success) {
+        console.log("✅ USER REGISTERED:", username);
+        // Save session immediately so the user is logged in after registration.
+        if (result.token) this._saveSession(result.user, false, result.token);
+      }
       return result;
     } catch (err) {
       console.warn("⚠️ Backend unavailable — using local fallback for register:", err.message);
@@ -132,7 +137,7 @@ const Auth = {
     try {
       const result = await this._apiPost("/login", { username, password });
       if (result.success) {
-        this._saveSession(result.user, rememberMe);
+        this._saveSession(result.user, rememberMe, result.token);
         console.log("✅ USER LOGGED IN:", username, rememberMe ? "(remembered)" : "");
       }
       return result;
@@ -144,6 +149,16 @@ const Auth = {
 
   // LOGOUT CURRENT USER
   logout() {
+    // Best-effort server-side token invalidation.
+    const token = this.getAuthToken();
+    if (token) {
+      fetch(this.API_BASE + "/logout", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      }).catch((err) => {
+        console.warn("⚠️ Server-side logout failed:", err.message);
+      });
+    }
     localStorage.removeItem(this.SESSION_KEY);
     sessionStorage.removeItem(this.SESSION_KEY);
     console.log("👋 USER LOGGED OUT");
@@ -176,6 +191,18 @@ const Auth = {
 
   getCurrentUser() {
     return this.getSession();
+  },
+
+  // GET THE AUTH TOKEN FOR THE CURRENT SESSION (used to authenticate /api/data calls)
+  getAuthToken() {
+    const session = this.getSession();
+    return session ? session.token || null : null;
+  },
+
+  // RETURN AUTHORIZATION HEADERS FOR API CALLS
+  getAuthHeaders() {
+    const token = this.getAuthToken();
+    return token ? { Authorization: `Bearer ${token}` } : {};
   },
 
   // RETURN THE LOCALSTORAGE KEY FOR THE CURRENT USER'S FINANCE DATA

@@ -13,6 +13,12 @@ document.addEventListener("DOMContentLoaded", () => {
   console.log("✅ BUDGET PAGE READY");
 });
 
+// RE-RENDER WHEN SERVER DATA ARRIVES (cross-device sync)
+window.addEventListener("financedata:synced", () => {
+  updateBudgetSummary();
+  displayCategoryBudgets();
+});
+
 function updateBudgetSummary() {
   const thisMonthTransactions = Utils.getThisMonthTransactions(
     financeData.transactions

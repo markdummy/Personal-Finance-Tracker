@@ -16,6 +16,14 @@ document.addEventListener("DOMContentLoaded", () => {
   console.log("✅ REPORTS PAGE READY");
 });
 
+// RE-RENDER WHEN SERVER DATA ARRIVES (cross-device sync)
+window.addEventListener("financedata:synced", () => {
+  populateYearSelect();
+  updateIncomeSummary();
+  updateFinancialSummary();
+  updateMonthlySpendingChart();
+});
+
 function populateYearSelect() {
   const yearSelect = document.getElementById("year-select");
   if (!yearSelect) return;

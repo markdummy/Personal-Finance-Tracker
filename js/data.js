@@ -4,6 +4,9 @@ const FinanceDataStore = {
   totalExpenses: 0,
   totalBudget: 0,
 
+  // API BASE (same origin as auth — both served by the backend)
+  DATA_API: "/api/data",
+
   // CATEGORIES DATA
   categories: {
     food: { name: "Food & Dining", spent: 0, budget: 0, icon: "🍔" },
@@ -188,9 +191,58 @@ const FinanceDataStore = {
         lastUpdated: new Date().toISOString(),
       };
       localStorage.setItem(this.storageKey, JSON.stringify(data));
+      // Fire-and-forget sync to server so other devices stay up-to-date.
+      this._syncToServer(data);
       return true;
     } catch (error) {
       console.error("❌ SAVE FAILED", error);
+      return false;
+    }
+  },
+
+  // PUSH CURRENT DATA TO SERVER (best-effort, does not throw)
+  async _syncToServer(data) {
+    if (!window.Auth || !window.Auth.getAuthToken()) return;
+    try {
+      await fetch(this.DATA_API, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...window.Auth.getAuthHeaders(),
+        },
+        body: JSON.stringify({ data }),
+      });
+    } catch (err) {
+      console.warn("⚠️ Failed to sync data to server:", err.message);
+    }
+  },
+
+  // PULL DATA FROM SERVER (returns true if data was loaded)
+  async _loadFromServer() {
+    if (!window.Auth || !window.Auth.getAuthToken()) return false;
+    try {
+      const res = await fetch(this.DATA_API, {
+        headers: window.Auth.getAuthHeaders(),
+      });
+      if (!res.ok) return false;
+      const result = await res.json();
+      if (!result.success || !result.data) return false;
+      const d = result.data;
+      this.totalIncome = d.totalIncome || 0;
+      this.totalExpenses = d.totalExpenses || 0;
+      this.totalBudget = d.totalBudget || 0;
+      this.categories = d.categories || this.categories;
+      this.transactions = d.transactions || [];
+      // Cache locally so the next page load is instant.
+      localStorage.setItem(this.storageKey, JSON.stringify(d));
+      console.log("✅ DATA LOADED FROM SERVER", {
+        income: this.totalIncome,
+        expenses: this.totalExpenses,
+        transactions: this.transactions.length,
+      });
+      return true;
+    } catch (err) {
+      console.warn("⚠️ Failed to load data from server:", err.message);
       return false;
     }
   },
@@ -293,7 +345,13 @@ const FinanceDataStore = {
   init() {
     console.log("🚀 INITIALIZING FINANCE DATA STORE...");
     this.load();
-    console.log("✅ READY!");
+    // Kick off async server sync; when it resolves the page will re-render.
+    this._loadFromServer().then((loaded) => {
+      if (loaded) {
+        window.dispatchEvent(new CustomEvent("financedata:synced"));
+      }
+      console.log("✅ READY!");
+    });
     return this;
   },
 

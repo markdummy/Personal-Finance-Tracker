@@ -5,6 +5,7 @@
 const express = require("express");
 const bcrypt = require("bcryptjs");
 const cors = require("cors");
+const crypto = require("crypto");
 const rateLimit = require("express-rate-limit");
 const Database = require("better-sqlite3");
 const path = require("path");
@@ -21,11 +22,53 @@ db.exec(`
     id          TEXT PRIMARY KEY,
     username    TEXT UNIQUE NOT NULL,
     password_hash TEXT NOT NULL,
-    created_at  TEXT NOT NULL
+    created_at  TEXT NOT NULL,
+    auth_token  TEXT
   )
 `);
 
+// Add auth_token column to existing databases that pre-date this migration.
+try {
+  db.exec("ALTER TABLE users ADD COLUMN auth_token TEXT");
+} catch (e) {
+  if (!e.message.includes("duplicate column name")) throw e;
+}
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS finance_data (
+    user_id    TEXT PRIMARY KEY,
+    data       TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES users(id)
+  )
+`);
+
+// ── HELPERS ───────────────────────────────────────────────────────────────────
+function generateToken() {
+  return crypto.randomBytes(32).toString("hex");
+}
+
+// Middleware: validate Bearer token and attach req.user.
+function requireAuth(req, res, next) {
+  const authHeader = req.headers["authorization"];
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return res.status(401).json({ success: false, message: "Unauthorized." });
+  }
+  const token = authHeader.slice(7);
+  const user = db
+    .prepare("SELECT id, username FROM users WHERE auth_token = ?")
+    .get(token);
+  if (!user) {
+    return res.status(401).json({ success: false, message: "Invalid or expired token." });
+  }
+  req.user = user;
+  next();
+}
+
 // ── MIDDLEWARE ────────────────────────────────────────────────────────────────
+// When CORS_ORIGIN is not set the server defaults to localhost only.
+// Set CORS_ORIGIN=* (or to your server's public address) when you need
+// cross-origin access from a different host or mobile device.
 app.use(
   cors({
     origin: process.env.CORS_ORIGIN || "http://localhost:3000",
@@ -41,6 +84,14 @@ app.use(express.static(path.join(__dirname, "..")));
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 20,                   // max 20 requests per window per IP
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: "Too many requests. Please try again later." },
+});
+
+const dataLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1 minute
+  max: 60,                  // max 60 data requests per minute per IP
   standardHeaders: true,
   legacyHeaders: false,
   message: { success: false, message: "Too many requests. Please try again later." },
@@ -84,15 +135,17 @@ app.post("/api/auth/register", authLimiter, async (req, res) => {
   const id =
     Date.now().toString(36) + Math.random().toString(36).substring(2);
   const createdAt = new Date().toISOString();
+  const token = generateToken();
 
   db.prepare(
-    "INSERT INTO users (id, username, password_hash, created_at) VALUES (?, ?, ?, ?)"
-  ).run(id, username, passwordHash, createdAt);
+    "INSERT INTO users (id, username, password_hash, created_at, auth_token) VALUES (?, ?, ?, ?, ?)"
+  ).run(id, username, passwordHash, createdAt, token);
 
   console.log("✅ USER REGISTERED:", username);
   return res.status(201).json({
     success: true,
     user: { id, username, createdAt },
+    token,
   });
 });
 
@@ -124,6 +177,9 @@ app.post("/api/auth/login", authLimiter, async (req, res) => {
       .json({ success: false, message: "Invalid username or password." });
   }
 
+  const token = generateToken();
+  db.prepare("UPDATE users SET auth_token = ? WHERE id = ?").run(token, user.id);
+
   console.log("✅ USER LOGGED IN:", username);
   return res.json({
     success: true,
@@ -132,12 +188,42 @@ app.post("/api/auth/login", authLimiter, async (req, res) => {
       username: user.username,
       createdAt: user.created_at,
     },
+    token,
   });
 });
 
-// POST /api/auth/logout  (client-side sessions — just an acknowledgement)
-app.post("/api/auth/logout", (_req, res) => {
+// POST /api/auth/logout  — invalidate the auth token
+app.post("/api/auth/logout", authLimiter, requireAuth, (req, res) => {
+  db.prepare("UPDATE users SET auth_token = NULL WHERE id = ?").run(req.user.id);
   res.json({ success: true });
+});
+
+// ── FINANCE DATA ROUTES ───────────────────────────────────────────────────────
+
+// GET /api/data — retrieve the current user's finance data
+app.get("/api/data", dataLimiter, requireAuth, (req, res) => {
+  const row = db
+    .prepare("SELECT data FROM finance_data WHERE user_id = ?")
+    .get(req.user.id);
+  if (!row) return res.json({ success: true, data: null });
+  try {
+    return res.json({ success: true, data: JSON.parse(row.data) });
+  } catch {
+    return res.json({ success: true, data: null });
+  }
+});
+
+// POST /api/data — save/replace the current user's finance data
+app.post("/api/data", dataLimiter, requireAuth, (req, res) => {
+  const data = req.body && req.body.data;
+  if (!data) {
+    return res.status(400).json({ success: false, message: "No data provided." });
+  }
+  const updatedAt = new Date().toISOString();
+  db.prepare(
+    "INSERT OR REPLACE INTO finance_data (user_id, data, updated_at) VALUES (?, ?, ?)"
+  ).run(req.user.id, JSON.stringify(data), updatedAt);
+  return res.json({ success: true });
 });
 
 // ── START ─────────────────────────────────────────────────────────────────────
