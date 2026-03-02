@@ -49,17 +49,42 @@ A modern, intuitive web application for managing personal finances with real-tim
 
 ### Prerequisites
 - Modern web browser (Chrome, Firefox, Safari, Edge)
-- No server or backend required - runs entirely in the browser!
 
-### Installation
+### Vercel Deployment (recommended — cross-device login)
 
-1. **Clone the repository**
+The live site at https://personal-finance-tracker-one-lyart.vercel.app/ uses
+**Vercel Postgres** to store accounts in the cloud so you can log in from any
+device (PC, iPhone, Android, etc.).
+
+To enable this for your own Vercel fork:
+
+1. Open your project in the [Vercel dashboard](https://vercel.com/dashboard).
+2. Go to **Storage → Create Database → Postgres** and follow the wizard.
+3. Click **Connect Project** — Vercel automatically adds the `POSTGRES_URL`
+   environment variable to your deployment.
+4. Redeploy the project.  The serverless API functions in `api/` will now
+   create the required tables on first use.
+
+> **Note:** Without a Vercel Postgres database the app falls back to storing
+> accounts in your browser's `localStorage`, which is device-specific and
+> cannot be shared across devices.
+
+### Local Development (with shared backend)
+
+To test cross-device login on your local network, run the included Express
+backend — it serves both the frontend and the REST API:
+
 ```bash
-   git clone https://github.com/yourusername/finance-tracker.git
-   cd finance-tracker
+cd backend
+npm install
+node server.js          # starts on http://localhost:3000
 ```
 
-2. **Open the application**
+Other devices on the same Wi-Fi network can reach it at
+`http://<your-pc-ip>:3000` (find your IP with `ipconfig` / `ip addr`).
+
+### Static-only (no backend)
+
 ```bash
    # Simply open index.html in your browser
    # Or use a local server:
@@ -67,12 +92,12 @@ A modern, intuitive web application for managing personal finances with real-tim
    # Python 3
    python -m http.server 8000
    
-   # Python 2
-   python -m SimpleHTTPServer 8000
-   
    # Node.js (with npx)
    npx http-server
 ```
+
+> **Note:** In static-only mode accounts are stored in `localStorage` and are
+> not shared across devices.
 
 3. **Access the app**
    - Open `http://localhost:8000` in your browser
@@ -107,16 +132,21 @@ A modern, intuitive web application for managing personal finances with real-tim
 
 - **Frontend**: HTML5, CSS3, Vanilla JavaScript
 - **Charts**: Chart.js v4.4.0
-- **Data Storage**: Browser LocalStorage API
+- **Data Storage**: Vercel Postgres (cloud) with localStorage cache/fallback
+- **Backend API**: Vercel Serverless Functions (Node.js)
 - **Design**: Custom CSS with modern UI/UX principles
 
 ## 💾 Data Storage
 
-All data is stored locally in your browser using the LocalStorage API:
-- ✅ No server required
-- ✅ Data persists between sessions
-- ✅ Privacy-focused (data never leaves your device)
+When deployed on Vercel with a Postgres database:
+- ✅ Accounts and finance data stored in the cloud
+- ✅ Log in from any device (PC, iPhone, Android, …)
+- ✅ Data persists between sessions and across browsers
 - ✅ Export functionality for backup
+
+Without a Vercel Postgres database (static / offline mode):
+- ⚠️ Data stored only in the current browser's `localStorage`
+- ⚠️ Accounts are **not** shared across devices
 
 ### Backup Your Data
 
@@ -196,16 +226,14 @@ financeData.reset(); // Clears all data (cannot be undone)
 
 ## 🔒 Privacy & Security
 
-- **100% Local**: All data stays on your device
+- **Server-backed**: Account credentials and finance data stored in Vercel Postgres when configured
 - **No Tracking**: No analytics or tracking scripts
-- **No Account Required**: No registration or login needed
-- **Offline Capable**: Works without internet (after first load)
+- **Offline Capable**: Falls back to localStorage when the server is unavailable
 
 ## 🐛 Known Issues & Limitations
 
-- Data is stored per browser (not synced across devices)
-- No cloud backup (manual export required)
-- Maximum localStorage limit (~5-10MB depending on browser)
+- Cross-device login requires a Vercel Postgres database (see Getting Started)
+- Maximum localStorage limit (~5-10MB depending on browser) applies in offline mode
 - No multi-currency support (PHP only)
 
 
@@ -215,13 +243,13 @@ financeData.reset(); // Clears all data (cannot be undone)
 - [ ] Multi-currency support
 - [ ] Dark mode toggle
 - [ ] Recurring transactions automation
-- [ ] Cloud sync option
+- [x] Cloud sync / cross-device login (Vercel Postgres)
 - [ ] Mobile app version
-- [ ] Password protection
+- [x] Password protection
 - [ ] Bill reminders
 - [ ] Financial goals tracking
 - [ ] Investment portfolio tracking
-- [ ] Multi-user accounts
+- [x] Multi-user accounts
 
 
 ## 👨‍💻 Author
