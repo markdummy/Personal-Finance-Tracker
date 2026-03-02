@@ -31,7 +31,7 @@ function updateDashboard() {
 
   updateRecentTransactions();
   updateSpendingChart();
-  updateCategoryChart();
+  updateCategoryChart(thisMonthTransactions);
 }
 
 function updateRecentTransactions() {
@@ -144,13 +144,12 @@ function updateSpendingChart() {
   }
 }
 
-function updateCategoryChart() {
+function updateCategoryChart(precomputedTransactions) {
   const canvas = document.getElementById("categoryChart");
   if (!canvas) return;
 
-  const thisMonthTransactions = Utils.getThisMonthTransactions(
-    financeData.transactions
-  );
+  const thisMonthTransactions = precomputedTransactions ||
+    Utils.getThisMonthTransactions(financeData.transactions);
   const thisMonthExpenses = thisMonthTransactions.filter(
     (t) => t.type === "expense"
   );
