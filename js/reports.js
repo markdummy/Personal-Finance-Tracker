@@ -1,3 +1,6 @@
+const MONTH_NAMES = ["", "January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+const MONTH_NAMES_SHORT = ["", "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
 // INITIALIZE PAGE
 document.addEventListener("DOMContentLoaded", () => {
   console.log("📊 REPORTS PAGE LOADING...");
@@ -23,25 +26,19 @@ function populateYearSelect() {
   years.add(currentYear);
   years.add(currentYear + 1);
 
+  let oldestYear = currentYear;
+  let newestYear = currentYear;
+
   financeData.transactions.forEach((t) => {
     const year = new Date(t.date).getFullYear();
     years.add(year);
+    if (year < oldestYear) oldestYear = year;
+    if (year > newestYear) newestYear = year;
   });
 
-  if (financeData.transactions.length > 0) {
-    const transactionYears = financeData.transactions.map((t) =>
-      new Date(t.date).getFullYear()
-    );
-    const oldestYear = Math.min(...transactionYears);
-    const newestYear = Math.max(...transactionYears);
-
-    for (
-      let year = oldestYear;
-      year <= Math.max(currentYear + 1, newestYear);
-      year++
-    ) {
-      years.add(year);
-    }
+  const rangeEnd = Math.max(currentYear + 1, newestYear);
+  for (let year = oldestYear; year <= rangeEnd; year++) {
+    years.add(year);
   }
 
   const sortedYears = Array.from(years).sort((a, b) => b - a);
@@ -75,13 +72,12 @@ function updateIncomeSummary() {
     financeData.transactions
   );
 
-  const monthlyIncome = thisMonthTransactions
-    .filter((t) => t.type === "income")
-    .reduce((sum, t) => sum + t.amount, 0);
-
-  const monthlyExpenses = thisMonthTransactions
-    .filter((t) => t.type === "expense")
-    .reduce((sum, t) => sum + t.amount, 0);
+  let monthlyIncome = 0;
+  let monthlyExpenses = 0;
+  thisMonthTransactions.forEach((t) => {
+    if (t.type === "income") monthlyIncome += t.amount;
+    else if (t.type === "expense") monthlyExpenses += t.amount;
+  });
 
   const netSavings = monthlyIncome - monthlyExpenses;
   const savingsRate =
@@ -294,51 +290,20 @@ function applyFilters(month, year, category) {
 
   console.log(`Filtered ${filteredTransactions.length} transactions`);
 
-  const income = filteredTransactions
-    .filter((t) => t.type === "income")
-    .reduce((sum, t) => sum + t.amount, 0);
-
-  const expenses = filteredTransactions
-    .filter((t) => t.type === "expense")
-    .reduce((sum, t) => sum + t.amount, 0);
+  let income = 0;
+  let expenses = 0;
+  filteredTransactions.forEach((t) => {
+    if (t.type === "income") income += t.amount;
+    else if (t.type === "expense") expenses += t.amount;
+  });
 
   const subtitle = document.getElementById("comparison-subtitle");
   if (subtitle) {
     let periodText = "";
     if (month && year) {
-      const monthNames = [
-        "",
-        "January",
-        "February",
-        "March",
-        "April",
-        "May",
-        "June",
-        "July",
-        "August",
-        "September",
-        "October",
-        "November",
-        "December",
-      ];
-      periodText = `${monthNames[parseInt(month)]} ${year}`;
+      periodText = `${MONTH_NAMES[parseInt(month)]} ${year}`;
     } else if (month) {
-      const monthNames = [
-        "",
-        "January",
-        "February",
-        "March",
-        "April",
-        "May",
-        "June",
-        "July",
-        "August",
-        "September",
-        "October",
-        "November",
-        "December",
-      ];
-      periodText = monthNames[parseInt(month)];
+      periodText = MONTH_NAMES[parseInt(month)];
     } else if (year) {
       periodText = year;
     } else {
@@ -469,39 +434,9 @@ function updateFinancialSummaryWithFiltered(transactions, month, year) {
   if (totalTransEl) totalTransEl.textContent = totalTransactions;
   if (transFooter) {
     if (month && year) {
-      const monthNames = [
-        "",
-        "Jan",
-        "Feb",
-        "Mar",
-        "Apr",
-        "May",
-        "Jun",
-        "Jul",
-        "Aug",
-        "Sep",
-        "Oct",
-        "Nov",
-        "Dec",
-      ];
-      transFooter.textContent = `${monthNames[parseInt(month)]} ${year}`;
+      transFooter.textContent = `${MONTH_NAMES_SHORT[parseInt(month)]} ${year}`;
     } else if (month) {
-      const monthNames = [
-        "",
-        "January",
-        "February",
-        "March",
-        "April",
-        "May",
-        "June",
-        "July",
-        "August",
-        "September",
-        "October",
-        "November",
-        "December",
-      ];
-      transFooter.textContent = monthNames[parseInt(month)];
+      transFooter.textContent = MONTH_NAMES[parseInt(month)];
     } else if (year) {
       transFooter.textContent = year;
     } else {
@@ -542,22 +477,7 @@ function exportToCSV() {
   // Filter by month
   if (monthSelect && monthSelect.value) {
     const month = parseInt(monthSelect.value);
-    const monthNames = [
-      "",
-      "jan",
-      "feb",
-      "mar",
-      "apr",
-      "may",
-      "jun",
-      "jul",
-      "aug",
-      "sep",
-      "oct",
-      "nov",
-      "dec",
-    ];
-    filename += `-${monthNames[month]}`;
+    filename += `-${MONTH_NAMES_SHORT[month].toLowerCase()}`;
     filteredTransactions = filteredTransactions.filter((t) => {
       const date = new Date(t.date);
       return date.getMonth() + 1 === month;
@@ -604,13 +524,12 @@ function exportToCSV() {
   csv += "\n";
   csv += "SUMMARY\n";
 
-  const totalIncome = filteredTransactions
-    .filter((t) => t.type === "income")
-    .reduce((sum, t) => sum + t.amount, 0);
-
-  const totalExpenses = filteredTransactions
-    .filter((t) => t.type === "expense")
-    .reduce((sum, t) => sum + t.amount, 0);
+  let totalIncome = 0;
+  let totalExpenses = 0;
+  filteredTransactions.forEach((t) => {
+    if (t.type === "income") totalIncome += t.amount;
+    else if (t.type === "expense") totalExpenses += t.amount;
+  });
 
   csv += `Total Income,,,₱${totalIncome.toLocaleString()}\n`;
   csv += `Total Expenses,,,₱${totalExpenses.toLocaleString()}\n`;
