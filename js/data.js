@@ -7,6 +7,9 @@ const FinanceDataStore = {
   // API BASE (same origin as auth — both served by the backend)
   DATA_API: "/api/data",
 
+  // Timer handle for debounced server sync (see _syncToServer)
+  _syncTimer: null,
+
   // CATEGORIES DATA
   categories: {
     food: { name: "Food & Dining", spent: 0, budget: 0, icon: "🍔" },
@@ -167,15 +170,12 @@ const FinanceDataStore = {
   getMonthlyExpenses() {
     const monthlyData = {};
 
-    this.transactions
-      .filter((t) => t.type === "expense")
-      .forEach((t) => {
-        const date = new Date(t.date);
-        const monthKey = `${date.getFullYear()}-${String(
-          date.getMonth() + 1
-        ).padStart(2, "0")}`;
-        monthlyData[monthKey] = (monthlyData[monthKey] || 0) + t.amount;
-      });
+    this.transactions.forEach((t) => {
+      if (t.type !== "expense") return;
+      // Dates are stored as "YYYY-MM-DD"; the first 7 characters give "YYYY-MM".
+      const monthKey = t.date.substring(0, 7);
+      monthlyData[monthKey] = (monthlyData[monthKey] || 0) + t.amount;
+    });
 
     return monthlyData;
   },
@@ -200,21 +200,26 @@ const FinanceDataStore = {
     }
   },
 
-  // PUSH CURRENT DATA TO SERVER (best-effort, does not throw)
-  async _syncToServer(data) {
-    if (!window.Auth || !window.Auth.getAuthToken()) return;
-    try {
-      await fetch(this.DATA_API, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...window.Auth.getAuthHeaders(),
-        },
-        body: JSON.stringify({ data }),
-      });
-    } catch (err) {
-      console.warn("⚠️ Failed to sync data to server:", err.message);
-    }
+  // PUSH CURRENT DATA TO SERVER (debounced: fires 1 s after the last save call)
+  // The 1-second window absorbs bursts of rapid saves (e.g., bulk edits) so
+  // only the final settled state is sent, reducing redundant network requests.
+  _syncToServer(data) {
+    clearTimeout(this._syncTimer);
+    this._syncTimer = setTimeout(async () => {
+      if (!window.Auth || !window.Auth.getAuthToken()) return;
+      try {
+        await fetch(this.DATA_API, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...window.Auth.getAuthHeaders(),
+          },
+          body: JSON.stringify({ data }),
+        });
+      } catch (err) {
+        console.warn("⚠️ Failed to sync data to server:", err.message);
+      }
+    }, 1000);
   },
 
   // PULL DATA FROM SERVER (returns true if data was loaded)
