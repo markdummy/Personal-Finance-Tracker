@@ -150,6 +150,7 @@ function displayAllExpenses() {
   expenses.sort((a, b) => new Date(b.date) - new Date(a.date));
 
   // DISPLAY EXPENSES
+  const fragment = document.createDocumentFragment();
   expenses.forEach((expense) => {
     const item = document.createElement("div");
     item.className = "expense-item";
@@ -177,8 +178,9 @@ function displayAllExpenses() {
       </div>
     `;
 
-    container.appendChild(item);
+    fragment.appendChild(item);
   });
+  container.appendChild(fragment);
 }
 
 function setupSearchAndFilter() {

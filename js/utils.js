@@ -187,13 +187,15 @@ const Utils = {
   },
 
   filterByDateRange(transactions, startDate, endDate) {
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-
-    return transactions.filter((t) => {
-      const date = new Date(t.date);
-      return date >= start && date <= end;
-    });
+    // Format a Date (or date string) as "YYYY-MM-DD" using local time so that
+    // it can be directly compared against the stored transaction date strings.
+    const fmt = (d) => {
+      if (typeof d === "string") return d.slice(0, 10);
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    };
+    const start = fmt(startDate);
+    const end = fmt(endDate);
+    return transactions.filter((t) => t.date >= start && t.date <= end);
   },
 
   getThisMonthTransactions(transactions) {

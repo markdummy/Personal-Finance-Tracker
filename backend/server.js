@@ -43,6 +43,19 @@ db.exec(`
   )
 `);
 
+// ── PREPARED STATEMENTS ───────────────────────────────────────────────────────
+// Prepared once at startup and reused on every request for best performance.
+const stmts = {
+  getUserByToken:  db.prepare("SELECT id, username FROM users WHERE auth_token = ?"),
+  getUserById:     db.prepare("SELECT id FROM users WHERE username = ?"),
+  getUserForLogin: db.prepare("SELECT id, username, password_hash, created_at FROM users WHERE username = ?"),
+  insertUser:      db.prepare("INSERT INTO users (id, username, password_hash, created_at, auth_token) VALUES (?, ?, ?, ?, ?)"),
+  updateToken:     db.prepare("UPDATE users SET auth_token = ? WHERE id = ?"),
+  clearToken:      db.prepare("UPDATE users SET auth_token = NULL WHERE id = ?"),
+  getFinanceData:  db.prepare("SELECT data FROM finance_data WHERE user_id = ?"),
+  upsertFinanceData: db.prepare("INSERT OR REPLACE INTO finance_data (user_id, data, updated_at) VALUES (?, ?, ?)"),
+};
+
 // ── HELPERS ───────────────────────────────────────────────────────────────────
 function generateToken() {
   return crypto.randomBytes(32).toString("hex");
@@ -55,9 +68,7 @@ function requireAuth(req, res, next) {
     return res.status(401).json({ success: false, message: "Unauthorized." });
   }
   const token = authHeader.slice(7);
-  const user = db
-    .prepare("SELECT id, username FROM users WHERE auth_token = ?")
-    .get(token);
+  const user = stmts.getUserByToken.get(token);
   if (!user) {
     return res.status(401).json({ success: false, message: "Invalid or expired token." });
   }
@@ -122,9 +133,7 @@ app.post("/api/auth/register", authLimiter, async (req, res) => {
     });
   }
 
-  const existing = db
-    .prepare("SELECT id FROM users WHERE username = ?")
-    .get(username);
+  const existing = stmts.getUserById.get(username);
   if (existing) {
     return res
       .status(409)
@@ -137,9 +146,7 @@ app.post("/api/auth/register", authLimiter, async (req, res) => {
   const createdAt = new Date().toISOString();
   const token = generateToken();
 
-  db.prepare(
-    "INSERT INTO users (id, username, password_hash, created_at, auth_token) VALUES (?, ?, ?, ?, ?)"
-  ).run(id, username, passwordHash, createdAt, token);
+  stmts.insertUser.run(id, username, passwordHash, createdAt, token);
 
   console.log("✅ USER REGISTERED:", username);
   return res.status(201).json({
@@ -160,9 +167,7 @@ app.post("/api/auth/login", authLimiter, async (req, res) => {
       .json({ success: false, message: "Username and password are required." });
   }
 
-  const user = db
-    .prepare("SELECT id, username, password_hash, created_at FROM users WHERE username = ?")
-    .get(username);
+  const user = stmts.getUserForLogin.get(username);
 
   if (!user) {
     return res
@@ -178,7 +183,7 @@ app.post("/api/auth/login", authLimiter, async (req, res) => {
   }
 
   const token = generateToken();
-  db.prepare("UPDATE users SET auth_token = ? WHERE id = ?").run(token, user.id);
+  stmts.updateToken.run(token, user.id);
 
   console.log("✅ USER LOGGED IN:", username);
   return res.json({
@@ -194,7 +199,7 @@ app.post("/api/auth/login", authLimiter, async (req, res) => {
 
 // POST /api/auth/logout  — invalidate the auth token
 app.post("/api/auth/logout", authLimiter, requireAuth, (req, res) => {
-  db.prepare("UPDATE users SET auth_token = NULL WHERE id = ?").run(req.user.id);
+  stmts.clearToken.run(req.user.id);
   res.json({ success: true });
 });
 
@@ -202,9 +207,7 @@ app.post("/api/auth/logout", authLimiter, requireAuth, (req, res) => {
 
 // GET /api/data — retrieve the current user's finance data
 app.get("/api/data", dataLimiter, requireAuth, (req, res) => {
-  const row = db
-    .prepare("SELECT data FROM finance_data WHERE user_id = ?")
-    .get(req.user.id);
+  const row = stmts.getFinanceData.get(req.user.id);
   if (!row) return res.json({ success: true, data: null });
   try {
     return res.json({ success: true, data: JSON.parse(row.data) });
@@ -220,9 +223,7 @@ app.post("/api/data", dataLimiter, requireAuth, (req, res) => {
     return res.status(400).json({ success: false, message: "No data provided." });
   }
   const updatedAt = new Date().toISOString();
-  db.prepare(
-    "INSERT OR REPLACE INTO finance_data (user_id, data, updated_at) VALUES (?, ?, ?)"
-  ).run(req.user.id, JSON.stringify(data), updatedAt);
+  stmts.upsertFinanceData.run(req.user.id, JSON.stringify(data), updatedAt);
   return res.json({ success: true });
 });
 
